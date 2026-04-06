@@ -1,28 +1,52 @@
 import torch
 import torch.nn as nn
+import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 import numpy as np
-from model import BetterMLP
+
+
+class SimpleCNN(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv1 = nn.Conv2d(1, 32, kernel_size=3, padding=1)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
+        self.pool = nn.MaxPool2d(2, 2)
+        self.dropout1 = nn.Dropout(0.25)
+        self.fc1 = nn.Linear(64 * 7 * 7, 128)
+        self.dropout2 = nn.Dropout(0.5)
+        self.fc2 = nn.Linear(128, 10)
+
+    def forward(self, x):
+        x = torch.relu(self.conv1(x))
+        x = self.pool(x)
+        x = torch.relu(self.conv2(x))
+        x = self.pool(x)
+        x = x.view(-1, 64 * 7 * 7)
+        x = self.dropout1(x)
+        x = torch.relu(self.fc1(x))
+        x = self.dropout2(x)
+        x = self.fc2(x)
+        return x
+
 
 transform = transforms.ToTensor()
-
 train_dataset = torchvision.datasets.MNIST(root='./data', train=True, download=True, transform=transform)
 test_dataset = torchvision.datasets.MNIST(root='./data', train=False, download=True, transform=transform)
 
 train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
 test_loader = DataLoader(test_dataset, batch_size=1000, shuffle=False)
 
-model = BetterMLP()
+model = SimpleCNN()
 criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+optimizer = optim.Adam(model.parameters(), lr=0.001)
 
 train_losses = []
 test_accuracies = []
 
-epochs = 15
-print("Започва обучение на по-добър модел (BetterMLP)...\n")
+epochs = 12
+print("Започва обучение на CNN модела...\n")
 
 for epoch in range(epochs):
     model.train()
@@ -54,11 +78,9 @@ for epoch in range(epochs):
 
     print(f"Epoch {epoch + 1}/{epochs} | Loss: {avg_loss:.4f} | Test Accuracy: {accuracy:.2f}%")
 
-torch.save(model.state_dict(), "models/mnist_mlp_model_2.pth")
+torch.save(model.state_dict(), "models/mnist_cnn_model.pth")
+np.save("cnn_train_losses.npy", np.array(train_losses))
+np.save("cnn_test_accuracies.npy", np.array(test_accuracies))
 
-np.save("train_losses.npy", np.array(train_losses))
-np.save("test_accuracies.npy", np.array(test_accuracies))
-
-print("\nОбучението завърши успешно!")
-print("Моделът е запазен като: mnist_mlp_model_2.pth")
-print("Данните за визуализация са запазени (train_losses.npy и test_accuracies.npy)")
+print("\nCNN обучението завърши!")
+print(f"Финална точност: {test_accuracies[-1]:.2f}%")

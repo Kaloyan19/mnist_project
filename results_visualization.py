@@ -1,43 +1,21 @@
-import torch
-import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+from sklearn.metrics import confusion_matrix
 import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
-
-
-# ====================== ЗАРЕЖДАНЕ НА МОДЕЛА ======================
-class BetterMLP(torch.nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.fc1 = torch.nn.Linear(28 * 28, 512)
-        self.fc2 = torch.nn.Linear(512, 256)
-        self.fc3 = torch.nn.Linear(256, 128)
-        self.fc4 = torch.nn.Linear(128, 10)
-        self.dropout = torch.nn.Dropout(0.3)
-
-    def forward(self, x):
-        x = x.view(-1, 28 * 28)
-        x = torch.relu(self.fc1(x))
-        x = self.dropout(x)
-        x = torch.relu(self.fc2(x))
-        x = self.dropout(x)
-        x = torch.relu(self.fc3(x))
-        x = self.fc4(x)
-        return x
+from model import BetterMLP
+import torch
 
 
 model = BetterMLP()
-model.load_state_dict(torch.load("mnist_mlp_model_2.pth", map_location=torch.device('cpu')))
+model.load_state_dict(torch.load("models/mnist_mlp_model_2.pth", map_location=torch.device('cpu')))
 model.eval()
 
 transform = transforms.ToTensor()
 test_dataset = torchvision.datasets.MNIST(root='./data', train=False, download=True, transform=transform)
 test_loader = DataLoader(test_dataset, batch_size=1000, shuffle=False)
 
-# ====================== CONFUSION MATRIX ======================
 all_preds = []
 all_labels = []
 
@@ -58,7 +36,6 @@ plt.ylabel('True Label')
 plt.savefig("confusion_matrix.png", dpi=300, bbox_inches='tight')
 plt.show()
 
-# ====================== ГРЕШНИ ПРИМЕРИ (много важен за доклада) ======================
 print("\n=== ПРИМЕРИ С ГРЕШНО ПРЕДСКАЗАНИ ЦИФРИ ===\n")
 
 model.eval()
@@ -71,7 +48,7 @@ with torch.no_grad():
         _, predicted = torch.max(outputs, 1)
 
         for i in range(len(labels)):
-            if predicted[i] != labels[i] and count < 12:  # показваме максимум 12 грешки
+            if predicted[i] != labels[i] and count < 12:
                 count += 1
                 plt.subplot(3, 4, count)
                 plt.imshow(images[i].squeeze(), cmap='gray')
